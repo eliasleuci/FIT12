@@ -141,8 +141,8 @@ export default function Home() {
         productId: product.id,
         name: product.name,
         price: product.sellPrice,
-        quantity: product.unitType === 'kg' ? 0.25 : 1,
-        subtotal: product.sellPrice * (product.unitType === 'kg' ? 0.25 : 1),
+        quantity: 1,
+        subtotal: product.sellPrice * 1,
         unitType: product.unitType
       }]);
     }
