@@ -22,13 +22,11 @@ export async function PUT(
             where: { id },
             data: {
                 name: body.name,
-                code: body.code || null,
                 categoryId: targetCategoryId,
                 unitType: body.unitType,
-                buyPrice: parseFloat(body.buyPrice),
                 sellPrice: parseFloat(body.sellPrice),
-                stock: parseFloat(body.stock),
                 baseUnit: body.baseUnit,
+                conversionFactor: parseFloat(body.conversionFactor || 1.0),
             },
             include: { category: true }
         });

@@ -28,12 +28,11 @@ export async function POST(request: Request) {
         const product = await prisma.product.create({
             data: {
                 name: data.name,
-                code: data.code,
                 categoryId: categoryId,
                 unitType: data.unitType,
-                buyPrice: parseFloat(data.buyPrice),
+                buyPrice: 0,
                 sellPrice: parseFloat(data.sellPrice),
-                stock: parseFloat(data.stock),
+                stock: 0,
                 baseUnit: data.baseUnit,
                 conversionFactor: parseFloat(data.conversionFactor || 1.0),
             }

@@ -274,7 +274,6 @@ export default function Home() {
                   <tr>
                     <th>Producto</th>
                     <th>Categoría</th>
-                    <th>Stock Actual</th>
                     <th>Venta</th>
                     <th>Acciones</th>
                   </tr>
@@ -287,16 +286,8 @@ export default function Home() {
                     )
                     .map((p: any) => (
                       <tr key={p.id}>
-                        <td>{p.name} <br /><small style={{ color: 'var(--text-secondary)' }}>{p.code}</small></td>
+                        <td>{p.name}</td>
                         <td>{p.category?.name}</td>
-                        <td>
-                          <span style={{
-                            color: p.stock < 1000 ? '#f87171' : 'var(--text-primary)',
-                            fontWeight: 'bold'
-                          }}>
-                            {p.stock} {p.baseUnit}
-                          </span>
-                        </td>
                         <td>${p.sellPrice} / {p.unitType}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -525,43 +516,7 @@ export default function Home() {
                   <h3 style={{ color: '#8b5cf6' }}>${stats?.profit?.toFixed(2) || '0.00'}</h3>
                 </div>
               </div>
-              <div className="glass card stats-card low-stock-card" style={{ position: 'relative' }}>
-                <div className="stats-icon" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}><Package size={24} /></div>
-                <div>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Stock Bajo</p>
-                  <h3 style={{ color: '#ef4444' }}>{stats?.lowStockCount || 0}</h3>
-                </div>
 
-                {stats?.lowStockItems?.length > 0 && (
-                  <div className="low-stock-dropdown shadow-lg animate-in" style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    zIndex: 200,
-                    width: '280px',
-                    background: 'rgba(30, 30, 35, 0.98)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid #ef4444',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '1rem',
-                    marginTop: '0.5rem',
-                    pointerEvents: 'none',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <h4 style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '0.8rem', borderBottom: '1px solid rgba(239,68,68,0.2)', paddingBottom: '0.4rem' }}>PRODUCTOS A REPONER</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
-                      {stats.lowStockItems.map((item: any) => (
-                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '0.3rem 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                          <span style={{ fontWeight: 500 }}>{item.name}</span>
-                          <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{item.stock} {item.baseUnit}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
             <div className="dashboard-widgets-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
@@ -694,10 +649,6 @@ export default function Home() {
                 <input type="text" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Ej: Nueces Mariposa" required />
               </div>
               <div className="input-group">
-                <label>Código (Opcional)</label>
-                <input type="text" value={newProduct.code} onChange={(e) => setNewProduct({ ...newProduct, code: e.target.value })} placeholder="Ej: FS-001" />
-              </div>
-              <div className="input-group">
                 <label>Categoría</label>
                 <select className="custom-select" value={newProduct.categoryId} onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })} required style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.8rem 1rem', color: 'var(--text-primary)' }}>
                   <option value="" style={{ color: 'black' }}>Seleccionar...</option>
@@ -726,16 +677,8 @@ export default function Home() {
                 </select>
               </div>
               <div className="input-group">
-                <label>Precio Compra</label>
-                <input type="number" step="0.01" value={newProduct.buyPrice} onChange={(e) => setNewProduct({ ...newProduct, buyPrice: e.target.value })} required />
-              </div>
-              <div className="input-group">
                 <label>Precio Venta</label>
                 <input type="number" step="0.01" value={newProduct.sellPrice} onChange={(e) => setNewProduct({ ...newProduct, sellPrice: e.target.value })} required />
-              </div>
-              <div className="input-group">
-                <label>Stock Inicial</label>
-                <input type="number" value={newProduct.stock} onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })} />
               </div>
               <div className="input-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
