@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -20,26 +20,26 @@ model User {
 model Category {
   id        String    @id @default(cuid())
   name      String    @unique
-  products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  products  Product[]
 }
 
 model Product {
-  id              String   @id @default(cuid())
-  name            String
-  code            String?  @unique
-  categoryId      String
-  category        Category @relation(fields: [categoryId], references: [id])
-  unitType        String
-  buyPrice        Float
-  sellPrice       Float
-  stock           Float    @default(0)
-  baseUnit        String
-  conversionFactor Float   @default(1.0)
-  saleItems       SaleItem[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String     @id @default(cuid())
+  name             String
+  code             String?    @unique
+  categoryId       String
+  unitType         String
+  buyPrice         Float
+  sellPrice        Float
+  stock            Float      @default(0)
+  baseUnit         String
+  conversionFactor Float      @default(1.0)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  category         Category   @relation(fields: [categoryId], references: [id])
+  saleItems        SaleItem[]
 }
 
 model Sale {
@@ -48,26 +48,22 @@ model Sale {
   total           Float
   subtotal        Float
   tax             Float?     @default(0)
-  
-  // Customer Data
+  sellerId        String
+  createdAt       DateTime   @default(now())
+  customerAddress String?
   customerName    String?
   customerPhone   String?
-  customerAddress String?
-
-  sellerId        String
   seller          User       @relation(fields: [sellerId], references: [id])
   items           SaleItem[]
-  createdAt       DateTime   @default(now())
 }
-
 
 model SaleItem {
   id        String  @id @default(cuid())
   saleId    String
-  sale      Sale    @relation(fields: [saleId], references: [id])
   productId String
-  product   Product @relation(fields: [productId], references: [id])
   quantity  Float
   price     Float
   subtotal  Float
+  product   Product @relation(fields: [productId], references: [id])
+  sale      Sale    @relation(fields: [saleId], references: [id])
 }
