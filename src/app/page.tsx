@@ -11,6 +11,7 @@ export default function Home() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [lastSale, setLastSale] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [salesHistory, setSalesHistory] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState({
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
@@ -19,8 +20,8 @@ export default function Home() {
   // New Product Form State
   const [newProduct, setNewProduct] = useState({
     name: "", code: "", categoryId: "", unitType: "kg",
-    buyPrice: "", sellPrice: "", stock: "0", baseUnit: "g",
-    conversionFactor: "1000",
+    buyPrice: "", sellPrice: "", stock: "0", baseUnit: "kg",
+    conversionFactor: "1",
     newCategoryName: ""
   });
 
@@ -37,6 +38,7 @@ export default function Home() {
     fetchProducts();
     fetchCategories();
     fetchStats();
+    fetchSalesHistory();
   }, [dateRange]);
 
   const fetchStats = async () => {
@@ -65,10 +67,37 @@ export default function Home() {
     if (!data.error) setCategories(data);
   };
 
+  const fetchSalesHistory = async () => {
+    try {
+      const params = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
+      });
+      const res = await fetch(`/api/sales?${params.toString()}`);
+      const data = await res.json();
+      if (!data.error && Array.isArray(data)) setSalesHistory(data);
+    } catch (err) {
+      console.error("Error fetching sales history:", err);
+    }
+  };
+
+  const deleteSale = async (saleId: string) => {
+    if (!confirm("¿Eliminar esta factura? El stock de los productos será restaurado.")) return;
+    const res = await fetch(`/api/sales/${saleId}`, { method: 'DELETE' });
+    if (res.ok) {
+      fetchSalesHistory();
+      fetchStats();
+      fetchProducts();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Error al eliminar la venta");
+    }
+  };
+
   const resetNewProduct = () => ({
     name: "", code: "", categoryId: "", unitType: "kg",
-    buyPrice: "", sellPrice: "", stock: "0", baseUnit: "g",
-    conversionFactor: "1000", newCategoryName: ""
+    buyPrice: "", sellPrice: "", stock: "0", baseUnit: "kg",
+    conversionFactor: "1", newCategoryName: ""
   });
 
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -132,28 +161,60 @@ export default function Home() {
     }
   }, [searchTerm, products]);
 
+  const getAvailableStock = (product: any) => {
+    // Stock is stored in baseUnit (e.g. kg). Return in sell unit.
+    const cf = product.conversionFactor || 1;
+    // If baseUnit === 'g' and unitType = 'kg', cf=1000: availableKg = stock/1000
+    // If baseUnit === 'kg' and unitType = 'kg', cf=1: availableKg = stock/1
+    // If baseUnit === 'u'  and unitType = 'unit', cf=1: available units = stock/1
+    return product.stock / cf;
+  };
+
   const addToCart = (product: any) => {
+    const availableStock = getAvailableStock(product);
     const existing = cart.find(item => item.productId === product.id);
+    const currentInCart = existing ? (parseFloat(existing.quantity) || 0) : 0;
+    const step = product.unitType === 'kg' ? 0.05 : 1;
+
+    if (availableStock <= 0) {
+      alert(`⚠️ Sin stock disponible para "${product.name}"`);
+      setSearchTerm("");
+      return;
+    }
+    if (currentInCart + step > availableStock) {
+      alert(`⚠️ Stock insuficiente para "${product.name}". Disponible: ${availableStock.toFixed(product.unitType === 'kg' ? 3 : 0)} ${product.unitType === 'kg' ? 'kg' : 'u'}`);
+      setSearchTerm("");
+      return;
+    }
+
     if (existing) {
-      updateCartQuantity(product.id, (existing.quantity + 1).toString());
+      updateCartQuantity(product.id, (currentInCart + step).toString(), product);
     } else {
       setCart([...cart, {
         productId: product.id,
         name: product.name,
         price: product.sellPrice,
-        quantity: 1,
-        subtotal: product.sellPrice * 1,
-        unitType: product.unitType
+        quantity: step,
+        subtotal: product.sellPrice * step,
+        unitType: product.unitType,
+        availableStock: availableStock
       }]);
     }
     setSearchTerm("");
   };
 
-  const updateCartQuantity = (id: string, qtyValue: string) => {
+  const updateCartQuantity = (id: string, qtyValue: string, productOverride?: any) => {
     setCart(prev => prev.map(item => {
       if (item.productId === id) {
         const qty = qtyValue === "" ? 0 : parseFloat(qtyValue);
         const newQty = isNaN(qty) ? 0 : qty;
+        // Get stock limit
+        const product = productOverride || products.find((p: any) => p.id === id);
+        const available = product ? getAvailableStock(product) : Infinity;
+        if (newQty > available && available !== Infinity) {
+          alert(`⚠️ Stock insuficiente. Disponible: ${available.toFixed(product?.unitType === 'kg' ? 3 : 0)} ${product?.unitType === 'kg' ? 'kg' : 'u'}`);
+          return item; // don't update
+        }
         return { ...item, quantity: qtyValue === "" ? "" : newQty, subtotal: (typeof newQty === 'number' ? newQty : 0) * item.price };
       }
       return item;
@@ -186,6 +247,8 @@ export default function Home() {
       setCart([]);
       setCustomer({ name: "", phone: "", address: "" });
       fetchProducts();
+      fetchStats();
+      fetchSalesHistory();
       alert(`${type} Generado con éxito`);
     } else {
       const err = await res.json();
@@ -274,6 +337,7 @@ export default function Home() {
                   <tr>
                     <th>Producto</th>
                     <th>Categoría</th>
+                    <th>Stock</th>
                     <th>Venta</th>
                     <th>Acciones</th>
                   </tr>
@@ -288,6 +352,14 @@ export default function Home() {
                       <tr key={p.id}>
                         <td>{p.name}</td>
                         <td>{p.category?.name}</td>
+                        <td>
+                          <span style={{
+                            color: p.stock <= 0 ? '#ef4444' : p.stock < 500 ? '#f59e0b' : 'var(--secondary-color)',
+                            fontWeight: 'bold'
+                          }}>
+                            {getAvailableStock(p).toFixed(p.unitType === 'kg' ? 2 : 0)} {p.unitType === 'kg' ? 'kg' : 'u'}
+                          </span>
+                        </td>
                         <td>${p.sellPrice} / {p.unitType}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -357,10 +429,14 @@ export default function Home() {
                     {searchResults.length > 0 && (
                       <div className="search-results glass-deep" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto', borderRadius: 'var(--radius-md)', background: 'rgba(30, 30, 35, 0.95)', backdropFilter: 'blur(20px)', border: '1px solid var(--border-color)' }}>
                         {searchResults.map(p => (
-                          <div key={p.id} className="search-item" onClick={() => addToCart(p)} style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                          <div key={p.id} className="search-item" onClick={() => addToCart(p)} style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', opacity: getAvailableStock(p) <= 0 ? 0.5 : 1 }}>
                             <div>
                               <strong>{p.name}</strong><br />
-                              <small>{p.code} - ${p.sellPrice}/{p.unitType}</small>
+                              <small>{p.code} - ${p.sellPrice}/{p.unitType}</small><br />
+                              <small style={{ color: getAvailableStock(p) <= 0 ? '#ef4444' : '#10b981' }}>
+                                Stock: {getAvailableStock(p).toFixed(p.unitType === 'kg' ? 3 : 0)} {p.unitType === 'kg' ? 'kg' : 'u'}
+                                {getAvailableStock(p) <= 0 && ' ⚠️ Sin stock'}
+                              </small>
                             </div>
                             <Plus size={16} />
                           </div>
@@ -384,19 +460,21 @@ export default function Home() {
                       {cart.map(item => (
                         <tr key={item.productId}>
                           <td>{item.name}</td>
-                          <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <input
-                              type="number"
-                              step={item.unitType === 'kg' ? '0.05' : '1'}
-                              value={item.quantity}
-                              onChange={(e) => updateCartQuantity(item.productId, e.target.value)}
-                              style={{ width: '80px', padding: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'white' }}
-                            />
-                            <small>{item.unitType}</small>
-                          </td>
-                          <td>${item.subtotal.toFixed(2)}</td>
                           <td>
-                            <button onClick={() => removeFromCart(item.productId)} style={{ color: '#ef4444', background: 'transparent' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                              <input
+                                type="number"
+                                step={item.unitType === 'kg' ? '0.05' : '1'}
+                                value={item.quantity}
+                                onChange={(e) => updateCartQuantity(item.productId, e.target.value)}
+                                style={{ width: '60px', padding: '0.4rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'white' }}
+                              />
+                              <small style={{ fontSize: '0.75rem', opacity: 0.7 }}>{item.unitType}</small>
+                            </div>
+                          </td>
+                          <td style={{ fontWeight: 'bold' }}>${item.subtotal.toFixed(2)}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button onClick={() => removeFromCart(item.productId)} style={{ color: '#ef4444', background: 'transparent', border: 'none', padding: '0.4rem', cursor: 'pointer' }}>
                               <Trash2 size={16} />
                             </button>
                           </td>
@@ -545,24 +623,94 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Top Products */}
-              <div className="glass card">
-                <h3 style={{ marginBottom: '1.5rem' }}>Top 5 Productos</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {stats?.topProducts?.map((p: any, i: number) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)' }}>
-                      <div>
-                        <strong style={{ display: 'block' }}>{p.name}</strong>
-                        <small style={{ color: 'var(--text-secondary)' }}>{p.quantity} vendidos</small>
+              {/* Top Products & Low Stock */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+                {/* Top Products */}
+                <div className="glass card">
+                  <h3 style={{ marginBottom: '1.5rem' }}>Top 5 Productos</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {stats?.topProducts?.map((p: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)' }}>
+                        <div>
+                          <strong style={{ display: 'block' }}>{p.name}</strong>
+                          <small style={{ color: 'var(--text-secondary)' }}>{p.quantity} vendidos</small>
+                        </div>
+                        <span style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${p.revenue.toFixed(2)}</span>
                       </div>
-                      <span style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${p.revenue.toFixed(2)}</span>
-                    </div>
-                  ))}
-                  {(!stats?.topProducts || stats.topProducts.length === 0) && (
-                    <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>No hay datos suficientes</p>
-                  )}
+                    ))}
+                    {(!stats?.topProducts || stats.topProducts.length === 0) && (
+                      <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>No hay datos suficientes</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Low Stock Alert */}
+                <div className="glass card">
+                  <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: '#f59e0b' }}>⚠️</span> Productos con Bajo Stock
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                    {stats?.lowStockItems?.length > 0 ? stats.lowStockItems.map((item: any) => (
+                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', borderRadius: 'var(--radius-md)', background: item.stock <= 0 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.07)', border: `1px solid ${item.stock <= 0 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}` }}>
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '0.95rem' }}>{item.name}</strong>
+                          <small style={{ color: 'var(--text-secondary)' }}>{item.category?.name}</small>
+                        </div>
+                        <span style={{ fontWeight: 'bold', color: item.stock <= 0 ? '#ef4444' : '#f59e0b', fontSize: '0.9rem' }}>
+                          {(item.stock / (item.baseUnit === 'g' ? 1000 : 1)).toFixed(item.unitType === 'kg' ? 2 : 0)} {item.unitType === 'kg' ? 'kg' : 'u'}
+                          {item.stock <= 0 && ' — Sin stock'}
+                        </span>
+                      </div>
+                    )) : (
+                      <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem' }}>✅ Todos los productos tienen stock suficiente</p>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Sales History */}
+              <div className="glass card">
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Trash2 size={18} style={{ color: '#ef4444' }} /> Historial de Ventas
+                  <small style={{ color: 'var(--text-secondary)', fontWeight: 'normal', marginLeft: 'auto' }}>Podés eliminar facturas erróneas — el stock se restaura automáticamente</small>
+                </h3>
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                        <th>Eliminar</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {salesHistory.length === 0 && (
+                        <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No hay ventas en este período</td></tr>
+                      )}
+                      {salesHistory.map((sale: any) => (
+                        <tr key={sale.id}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{new Date(sale.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                          <td><span style={{ background: sale.type === 'Factura' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.1)', color: sale.type === 'Factura' ? '#60a5fa' : '#10b981', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>{sale.type}</span></td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{sale.customerName || 'Consumidor Final'}</td>
+                          <td style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${sale.total.toFixed(2)}</td>
+                          <td>
+                            <button
+                              onClick={() => deleteSale(sale.id)}
+                              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.35rem 0.7rem', borderRadius: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem' }}
+                              title="Eliminar esta venta y restaurar stock"
+                            >
+                              <Trash2 size={13} /> Anular
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
@@ -682,6 +830,20 @@ export default function Home() {
               </div>
               <div className="input-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  Stock Actual
+                  <span title="Cantidad disponible en la unidad de venta (kg o unidades)" style={{ cursor: 'help', fontSize: '1rem', background: 'rgba(255,255,255,0.1)', width: '18px', height: '18px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>?</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={newProduct.stock}
+                  onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="input-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   Unidad Base
                   <span title="Unidad mínima en la que mides el stock (Ej: 'g' para granos, 'u' para cajas)" style={{ cursor: 'help', fontSize: '1rem', background: 'rgba(255,255,255,0.1)', width: '18px', height: '18px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>?</span>
                 </label>
@@ -709,6 +871,7 @@ export default function Home() {
 
       <style jsx>{`
         .billing-grid { grid-template-columns: 1fr; }
+        .product-form-grid { grid-template-columns: 1fr; }
         @media (min-width: 1024px) {
           .billing-grid { grid-template-columns: 1.2fr 0.8fr !important; }
           .product-form-grid { grid-template-columns: 1fr 1fr !important; }
@@ -720,6 +883,14 @@ export default function Home() {
           .grid { gap: 1rem !important; }
           .glass.card { padding: 1.2rem !important; }
           h2 { fontSize: 1.25rem !important; }
+          .table-container { 
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          table {
+            min-width: 600px;
+          }
         }
         .low-stock-card:hover .low-stock-dropdown {
           opacity: 1 !important;

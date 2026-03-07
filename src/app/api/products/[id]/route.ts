@@ -25,6 +25,7 @@ export async function PUT(
                 categoryId: targetCategoryId,
                 unitType: body.unitType,
                 sellPrice: parseFloat(body.sellPrice),
+                stock: parseFloat(body.stock ?? 0),
                 baseUnit: body.baseUnit,
                 conversionFactor: parseFloat(body.conversionFactor || 1.0),
             },

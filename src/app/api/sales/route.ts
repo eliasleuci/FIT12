@@ -1,6 +1,47 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export async function GET(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const startDateParam = searchParams.get("startDate");
+        const endDateParam = searchParams.get("endDate");
+
+        let dateFilter = {};
+        if (startDateParam || endDateParam) {
+            const start = startDateParam ? new Date(startDateParam) : null;
+            if (start) start.setUTCHours(0, 0, 0, 0);
+
+            const end = endDateParam ? new Date(endDateParam) : null;
+            if (end) end.setUTCHours(23, 59, 59, 999);
+
+            dateFilter = {
+                createdAt: {
+                    ...(start ? { gte: start } : {}),
+                    ...(end ? { lte: end } : {}),
+                }
+            };
+        }
+
+        const sales = await prisma.sale.findMany({
+            where: dateFilter,
+            include: {
+                items: {
+                    include: { product: { select: { name: true } } }
+                }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 50
+        });
+
+        return NextResponse.json(sales);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+
+
 export async function POST(request: Request) {
     try {
         const { type, items, sellerId, customerName, customerPhone, customerAddress } = await request.json();

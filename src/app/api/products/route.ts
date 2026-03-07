@@ -32,7 +32,7 @@ export async function POST(request: Request) {
                 unitType: data.unitType,
                 buyPrice: 0,
                 sellPrice: parseFloat(data.sellPrice),
-                stock: 0,
+                stock: parseFloat(data.stock || 0),
                 baseUnit: data.baseUnit,
                 conversionFactor: parseFloat(data.conversionFactor || 1.0),
             }

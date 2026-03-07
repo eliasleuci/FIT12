@@ -9,10 +9,16 @@ export async function GET(req: Request) {
 
         let dateFilter = {};
         if (startDateParam || endDateParam) {
+            const start = startDateParam ? new Date(startDateParam) : null;
+            if (start) start.setUTCHours(0, 0, 0, 0);
+
+            const end = endDateParam ? new Date(endDateParam) : null;
+            if (end) end.setUTCHours(23, 59, 59, 999);
+
             dateFilter = {
                 createdAt: {
-                    ...(startDateParam ? { gte: new Date(startDateParam) } : {}),
-                    ...(endDateParam ? { lte: new Date(endDateParam) } : {}),
+                    ...(start ? { gte: start } : {}),
+                    ...(end ? { lte: end } : {}),
                 }
             };
         }
