@@ -31,6 +31,8 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [customer, setCustomer] = useState({ name: "", phone: "", address: "" });
   const [inventorySearchTerm, setInventorySearchTerm] = useState("");
+  const [stockFilter, setStockFilter] = useState<"all" | "negative" | "low" | "ok">("all");
+  const [showAllLowStock, setShowAllLowStock] = useState(false);
 
   const subtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
 
@@ -128,10 +130,10 @@ export default function Home() {
       code: product.code || "",
       categoryId: product.categoryId,
       unitType: product.unitType,
-      buyPrice: product.buyPrice.toString(),
-      sellPrice: product.sellPrice.toString(),
-      stock: product.stock.toString(),
-      baseUnit: product.baseUnit,
+      buyPrice: (product.buyPrice ?? 0).toString(),
+      sellPrice: (product.sellPrice ?? 0).toString(),
+      stock: (product.stock ?? 0).toString(),
+      baseUnit: product.baseUnit || "kg",
       conversionFactor: product.conversionFactor?.toString() || "1",
       newCategoryName: ""
     });
@@ -177,14 +179,15 @@ export default function Home() {
     const step = product.unitType === 'kg' ? 0.05 : 1;
 
     if (availableStock <= 0) {
-      alert(`⚠️ Sin stock disponible para "${product.name}"`);
-      setSearchTerm("");
-      return;
-    }
-    if (currentInCart + step > availableStock) {
-      alert(`⚠️ Stock insuficiente para "${product.name}". Disponible: ${availableStock.toFixed(product.unitType === 'kg' ? 3 : 0)} ${product.unitType === 'kg' ? 'kg' : 'u'}`);
-      setSearchTerm("");
-      return;
+      if (!window.confirm(`⚠️ "${product.name}" no tiene stock registrado. ¿Deseas agregarlo a la venta de todos modos?`)) {
+        setSearchTerm("");
+        return;
+      }
+    } else if (currentInCart + step > availableStock) {
+      if (!window.confirm(`⚠️ Stock insuficiente para "${product.name}". Disponible: ${availableStock.toFixed(product.unitType === 'kg' ? 3 : 0)} ${product.unitType === 'kg' ? 'kg' : 'u'}. ¿Deseas vender de todos modos?`)) {
+        setSearchTerm("");
+        return;
+      }
     }
 
     if (existing) {
@@ -212,8 +215,9 @@ export default function Home() {
         const product = productOverride || products.find((p: any) => p.id === id);
         const available = product ? getAvailableStock(product) : Infinity;
         if (newQty > available && available !== Infinity) {
-          alert(`⚠️ Stock insuficiente. Disponible: ${available.toFixed(product?.unitType === 'kg' ? 3 : 0)} ${product?.unitType === 'kg' ? 'kg' : 'u'}`);
-          return item; // don't update
+          if (!window.confirm(`⚠️ Stock insuficiente. Disponible: ${available.toFixed(product?.unitType === 'kg' ? 3 : 0)} ${product?.unitType === 'kg' ? 'kg' : 'u'}. ¿Continuar de todos modos?`)) {
+            return item; // don't update
+          }
         }
         return { ...item, quantity: qtyValue === "" ? "" : newQty, subtotal: (typeof newQty === 'number' ? newQty : 0) * item.price };
       }
@@ -319,15 +323,27 @@ export default function Home() {
                   <Plus size={20} /> Nuevo Producto
                 </button>
               </div>
-              <div className="input-with-icon" style={{ position: 'relative' }}>
-                <Search className="search-icon" size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                <input
-                  type="text"
-                  placeholder="Buscar en inventario (nombre o código)..."
-                  style={{ paddingLeft: '3rem' }}
-                  value={inventorySearchTerm}
-                  onChange={(e) => setInventorySearchTerm(e.target.value)}
-                />
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="input-with-icon" style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
+                  <Search className="search-icon" size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                  <input
+                    type="text"
+                    placeholder="Buscar en inventario (nombre o código)..."
+                    style={{ paddingLeft: '3rem' }}
+                    value={inventorySearchTerm}
+                    onChange={(e) => setInventorySearchTerm(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                  <button
+                    onClick={() => setStockFilter("all")}
+                    style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', background: stockFilter === "all" ? 'var(--primary-color)' : 'transparent', color: stockFilter === "all" ? 'white' : 'var(--text-secondary)', border: 'none' }}
+                  >Todos</button>
+                  <button
+                    onClick={() => setStockFilter("low")}
+                    style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', background: stockFilter === "low" ? '#f59e0b' : 'transparent', color: stockFilter === "low" ? 'white' : '#f59e0b', border: 'none' }}
+                  >Stock Bajo</button>
+                </div>
               </div>
             </header>
 
@@ -344,10 +360,21 @@ export default function Home() {
                 </thead>
                 <tbody>
                   {products
-                    .filter((p: any) =>
-                      p.name.toLowerCase().includes(inventorySearchTerm.toLowerCase()) ||
-                      (p.code && p.code.toLowerCase().includes(inventorySearchTerm.toLowerCase()))
-                    )
+                    .filter((p: any) => {
+                      // Status filter
+                      if (stockFilter === "negative") {
+                        if (p.stock >= 0) return false;
+                      } else if (stockFilter === "low") {
+                        const threshold = p.baseUnit === 'g' ? 1000 : 5; // 1kg or 5 units
+                        if (p.stock >= threshold || p.stock < 0) return false;
+                      }
+
+                      // Text search
+                      const matchesText = p.name.toLowerCase().includes(inventorySearchTerm.toLowerCase()) ||
+                        (p.code && p.code.toLowerCase().includes(inventorySearchTerm.toLowerCase()));
+
+                      return matchesText;
+                    })
                     .map((p: any) => (
                       <tr key={p.id}>
                         <td>{p.name}</td>
@@ -650,18 +677,32 @@ export default function Home() {
                     <span style={{ color: '#f59e0b' }}>⚠️</span> Productos con Bajo Stock
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    {stats?.lowStockItems?.length > 0 ? stats.lowStockItems.map((item: any) => (
-                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', borderRadius: 'var(--radius-md)', background: item.stock <= 0 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.07)', border: `1px solid ${item.stock <= 0 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}` }}>
-                        <div>
-                          <strong style={{ display: 'block', fontSize: '0.95rem' }}>{item.name}</strong>
-                          <small style={{ color: 'var(--text-secondary)' }}>{item.category?.name}</small>
-                        </div>
-                        <span style={{ fontWeight: 'bold', color: item.stock <= 0 ? '#ef4444' : '#f59e0b', fontSize: '0.9rem' }}>
-                          {(item.stock / (item.baseUnit === 'g' ? 1000 : 1)).toFixed(item.unitType === 'kg' ? 2 : 0)} {item.unitType === 'kg' ? 'kg' : 'u'}
-                          {item.stock <= 0 && ' — Sin stock'}
-                        </span>
-                      </div>
-                    )) : (
+                    {stats?.lowStockItems?.length > 0 ? (
+                      <>
+                        {(showAllLowStock ? stats.lowStockItems : stats.lowStockItems.slice(0, 5)).map((item: any) => (
+                          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', borderRadius: 'var(--radius-md)', background: item.stock <= 0 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.07)', border: `1px solid ${item.stock <= 0 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}` }}>
+                            <div>
+                              <strong style={{ display: 'block', fontSize: '0.95rem' }}>{item.name}</strong>
+                              <small style={{ color: 'var(--text-secondary)' }}>{item.category?.name}</small>
+                            </div>
+                            <span style={{ fontWeight: 'bold', color: item.stock <= 0 ? '#ef4444' : '#f59e0b', fontSize: '0.9rem' }}>
+                              {(item.stock / (item.baseUnit === 'g' ? 1000 : 1)).toFixed(item.unitType === 'kg' ? 2 : 0)} {item.unitType === 'kg' ? 'kg' : 'u'}
+                              {item.stock <= 0 && ' — Sin stock'}
+                            </span>
+                          </div>
+                        ))}
+                        {stats.lowStockItems.length > 5 && (
+                          <button
+                            onClick={() => setShowAllLowStock(!showAllLowStock)}
+                            style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-md)', marginTop: '0.5rem', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 'bold', fontSize: '0.9rem' }}
+                            onMouseOver={(e) => e.currentTarget.style.color = 'white'}
+                            onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                          >
+                            {showAllLowStock ? 'Ver Menos Mostrar 5 de ' + stats.lowStockItems.length : `Ver Todos (${stats.lowStockItems.length})`}
+                          </button>
+                        )}
+                      </>
+                    ) : (
                       <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem' }}>✅ Todos los productos tienen stock suficiente</p>
                     )}
                   </div>

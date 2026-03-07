@@ -24,18 +24,26 @@ export async function PUT(
                 name: body.name,
                 categoryId: targetCategoryId,
                 unitType: body.unitType,
-                sellPrice: parseFloat(body.sellPrice),
-                stock: parseFloat(body.stock ?? 0),
+                sellPrice: parseFloat(body.sellPrice) || 0,
+                buyPrice: parseFloat(body.buyPrice || 0),
+                stock: parseFloat(body.stock ?? 0) || 0,
                 baseUnit: body.baseUnit,
-                conversionFactor: parseFloat(body.conversionFactor || 1.0),
+                conversionFactor: parseFloat(body.conversionFactor || 1.0) || 1.0,
             },
             include: { category: true }
         });
 
         return NextResponse.json(product);
-    } catch (error) {
-        console.error('Error updating product:', error);
-        return NextResponse.json({ error: 'Error al actualizar el producto' }, { status: 500 });
+    } catch (error: any) {
+        console.error('Error updating product:', {
+            id: (await params).id,
+            error: error.message,
+            stack: error.stack
+        });
+        return NextResponse.json({
+            error: 'Error al actualizar el producto',
+            details: error.message
+        }, { status: 500 });
     }
 }
 
