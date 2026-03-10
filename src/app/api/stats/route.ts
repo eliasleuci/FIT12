@@ -48,24 +48,32 @@ export async function GET(req: Request) {
         });
 
         // 2. Low Stock Items
-        const lowStockItems = await prisma.product.findMany({
-            where: {
-                stock: {
-                    lt: 1000 // Less than 1kg or 1000 units
+        const rootSettings = await prisma.systemSettings.findUnique({ where: { id: "default" } });
+        const stockEnabled = rootSettings ? rootSettings.enableStock : true;
+
+        let lowStockItems: any[] = [];
+        let lowStockCount = 0;
+
+        if (stockEnabled) {
+            lowStockItems = await prisma.product.findMany({
+                where: {
+                    stock: {
+                        lt: 1000 // Less than 1kg or 1000 units
+                    }
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    stock: true,
+                    unitType: true,
+                    baseUnit: true,
+                    category: {
+                        select: { name: true }
+                    }
                 }
-            },
-            select: {
-                id: true,
-                name: true,
-                stock: true,
-                unitType: true,
-                baseUnit: true,
-                category: {
-                    select: { name: true }
-                }
-            }
-        });
-        const lowStockCount = lowStockItems.length;
+            });
+            lowStockCount = lowStockItems.length;
+        }
 
         // 3. Top Products with filter
         const topProductsRaw = await prisma.saleItem.groupBy({

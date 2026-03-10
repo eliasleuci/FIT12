@@ -48,11 +48,11 @@ model Sale {
   total           Float
   subtotal        Float
   tax             Float?     @default(0)
-  sellerId        String
-  createdAt       DateTime   @default(now())
-  customerAddress String?
   customerName    String?
   customerPhone   String?
+  customerAddress String?
+  sellerId        String
+  createdAt       DateTime   @default(now())
   seller          User       @relation(fields: [sellerId], references: [id])
   items           SaleItem[]
 }
@@ -66,4 +66,10 @@ model SaleItem {
   subtotal  Float
   product   Product @relation(fields: [productId], references: [id])
   sale      Sale    @relation(fields: [saleId], references: [id])
+}
+
+model SystemSettings {
+  id          String   @id @default("default")
+  enableStock Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
 }

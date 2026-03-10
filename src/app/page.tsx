@@ -33,15 +33,50 @@ export default function Home() {
   const [inventorySearchTerm, setInventorySearchTerm] = useState("");
   const [stockFilter, setStockFilter] = useState<"all" | "negative" | "low" | "ok">("all");
   const [showAllLowStock, setShowAllLowStock] = useState(false);
+  const [enableStock, setEnableStock] = useState(true);
+
+  // Deterministic scale calculation to ALWAYS fit within a 148.5mm (half A4) boundary.
+  // Base metadata height ~320px. Each item ~45px. Target height 520px out of 560px total.
+  const printScale = lastSale ? Math.min(1, 520 / (320 + lastSale.items.length * 45)) : 1;
+  const printWidth = `${(100 / printScale).toFixed(2)}%`;
+
+  const printRef = useRef<HTMLDivElement>(null);
 
   const subtotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
 
   useEffect(() => {
+    fetchSettings();
     fetchProducts();
     fetchCategories();
     fetchStats();
     fetchSalesHistory();
   }, [dateRange]);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data && data.enableStock !== undefined) setEnableStock(data.enableStock);
+    } catch (err) {
+      console.error("Error fetching settings:", err);
+    }
+  };
+
+  const toggleStock = async () => {
+    const newState = !enableStock;
+    setEnableStock(newState);
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enableStock: newState })
+      });
+      fetchStats();
+    } catch (err) {
+      console.error(err);
+      setEnableStock(!newState);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -176,17 +211,19 @@ export default function Home() {
     const availableStock = getAvailableStock(product);
     const existing = cart.find(item => item.productId === product.id);
     const currentInCart = existing ? (parseFloat(existing.quantity) || 0) : 0;
-    const step = product.unitType === 'kg' ? 0.05 : 1;
+    const step = 1;
 
-    if (availableStock <= 0) {
-      if (!window.confirm(`⚠️ "${product.name}" no tiene stock registrado. ¿Deseas agregarlo a la venta de todos modos?`)) {
-        setSearchTerm("");
-        return;
-      }
-    } else if (currentInCart + step > availableStock) {
-      if (!window.confirm(`⚠️ Stock insuficiente para "${product.name}". Disponible: ${availableStock.toFixed(product.unitType === 'kg' ? 3 : 0)} ${product.unitType === 'kg' ? 'kg' : 'u'}. ¿Deseas vender de todos modos?`)) {
-        setSearchTerm("");
-        return;
+    if (enableStock) {
+      if (availableStock <= 0) {
+        if (!window.confirm(`⚠️ "${product.name}" no tiene stock registrado. ¿Deseas agregarlo a la venta de todos modos?`)) {
+          setSearchTerm("");
+          return;
+        }
+      } else if (currentInCart + step > availableStock) {
+        if (!window.confirm(`⚠️ Stock insuficiente para "${product.name}". Disponible: ${availableStock.toFixed(product.unitType === 'kg' ? 3 : 0)} ${product.unitType === 'kg' ? 'kg' : 'u'}. ¿Deseas vender de todos modos?`)) {
+          setSearchTerm("");
+          return;
+        }
       }
     }
 
@@ -214,7 +251,7 @@ export default function Home() {
         // Get stock limit
         const product = productOverride || products.find((p: any) => p.id === id);
         const available = product ? getAvailableStock(product) : Infinity;
-        if (newQty > available && available !== Infinity) {
+        if (enableStock && newQty > available && available !== Infinity) {
           if (!window.confirm(`⚠️ Stock insuficiente. Disponible: ${available.toFixed(product?.unitType === 'kg' ? 3 : 0)} ${product?.unitType === 'kg' ? 'kg' : 'u'}. ¿Continuar de todos modos?`)) {
             return item; // don't update
           }
@@ -319,9 +356,15 @@ export default function Home() {
             <header style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2>Gestión de Inventario</h2>
-                <button className="primary-btn" onClick={() => setShowAddProduct(true)}>
-                  <Plus size={20} /> Nuevo Producto
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <label style={{ fontSize: '0.85rem', color: enableStock ? '#10b981' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                    <input type="checkbox" checked={enableStock} onChange={toggleStock} style={{ marginRight: '0.5rem', cursor: 'pointer', accentColor: 'var(--primary-color)' }} />
+                    Stock: {enableStock ? 'ON' : 'OFF'}
+                  </label>
+                  <button className="primary-btn" onClick={() => setShowAddProduct(true)}>
+                    <Plus size={20} /> Nuevo Producto
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div className="input-with-icon" style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
@@ -353,7 +396,7 @@ export default function Home() {
                   <tr>
                     <th>Producto</th>
                     <th>Categoría</th>
-                    <th>Stock</th>
+                    {enableStock && <th>Stock</th>}
                     <th>Venta</th>
                     <th>Acciones</th>
                   </tr>
@@ -379,14 +422,16 @@ export default function Home() {
                       <tr key={p.id}>
                         <td>{p.name}</td>
                         <td>{p.category?.name}</td>
-                        <td>
-                          <span style={{
-                            color: p.stock <= 0 ? '#ef4444' : p.stock < 500 ? '#f59e0b' : 'var(--secondary-color)',
-                            fontWeight: 'bold'
-                          }}>
-                            {getAvailableStock(p).toFixed(p.unitType === 'kg' ? 2 : 0)} {p.unitType === 'kg' ? 'kg' : 'u'}
-                          </span>
-                        </td>
+                        {enableStock && (
+                          <td>
+                            <span style={{
+                              color: p.stock <= 0 ? '#ef4444' : p.stock < 500 ? '#f59e0b' : 'var(--secondary-color)',
+                              fontWeight: 'bold'
+                            }}>
+                              {getAvailableStock(p).toFixed(p.unitType === 'kg' ? 2 : 0)} {p.unitType === 'kg' ? 'kg' : 'u'}
+                            </span>
+                          </td>
+                        )}
                         <td>${p.sellPrice} / {p.unitType}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -460,10 +505,12 @@ export default function Home() {
                             <div>
                               <strong>{p.name}</strong><br />
                               <small>{p.code} - ${p.sellPrice}/{p.unitType}</small><br />
-                              <small style={{ color: getAvailableStock(p) <= 0 ? '#ef4444' : '#10b981' }}>
-                                Stock: {getAvailableStock(p).toFixed(p.unitType === 'kg' ? 3 : 0)} {p.unitType === 'kg' ? 'kg' : 'u'}
-                                {getAvailableStock(p) <= 0 && ' ⚠️ Sin stock'}
-                              </small>
+                              {enableStock && (
+                                <small style={{ color: getAvailableStock(p) <= 0 ? '#ef4444' : '#10b981' }}>
+                                  Stock: {getAvailableStock(p).toFixed(p.unitType === 'kg' ? 3 : 0)} {p.unitType === 'kg' ? 'kg' : 'u'}
+                                  {getAvailableStock(p) <= 0 && ' ⚠️ Sin stock'}
+                                </small>
+                              )}
                             </div>
                             <Plus size={16} />
                           </div>
@@ -562,7 +609,7 @@ export default function Home() {
           <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {/* Header with Date Filter */}
             <div className="glass card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.2rem 2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
                 <BarChart3 size={24} style={{ color: 'var(--primary-color)' }} />
                 <h2 style={{ margin: 0 }}>Panel de Control</h2>
               </div>
@@ -672,41 +719,43 @@ export default function Home() {
                 </div>
 
                 {/* Low Stock Alert */}
-                <div className="glass card">
-                  <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: '#f59e0b' }}>⚠️</span> Productos con Bajo Stock
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    {stats?.lowStockItems?.length > 0 ? (
-                      <>
-                        {(showAllLowStock ? stats.lowStockItems : stats.lowStockItems.slice(0, 5)).map((item: any) => (
-                          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', borderRadius: 'var(--radius-md)', background: item.stock <= 0 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.07)', border: `1px solid ${item.stock <= 0 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}` }}>
-                            <div>
-                              <strong style={{ display: 'block', fontSize: '0.95rem' }}>{item.name}</strong>
-                              <small style={{ color: 'var(--text-secondary)' }}>{item.category?.name}</small>
+                {enableStock && (
+                  <div className="glass card">
+                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ color: '#f59e0b' }}>⚠️</span> Productos con Bajo Stock
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                      {stats?.lowStockItems?.length > 0 ? (
+                        <>
+                          {(showAllLowStock ? stats.lowStockItems : stats.lowStockItems.slice(0, 5)).map((item: any) => (
+                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', borderRadius: 'var(--radius-md)', background: item.stock <= 0 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.07)', border: `1px solid ${item.stock <= 0 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}` }}>
+                              <div>
+                                <strong style={{ display: 'block', fontSize: '0.95rem' }}>{item.name}</strong>
+                                <small style={{ color: 'var(--text-secondary)' }}>{item.category?.name}</small>
+                              </div>
+                              <span style={{ fontWeight: 'bold', color: item.stock <= 0 ? '#ef4444' : '#f59e0b', fontSize: '0.9rem' }}>
+                                {(item.stock / (item.baseUnit === 'g' ? 1000 : 1)).toFixed(item.unitType === 'kg' ? 2 : 0)} {item.unitType === 'kg' ? 'kg' : 'u'}
+                                {item.stock <= 0 && ' — Sin stock'}
+                              </span>
                             </div>
-                            <span style={{ fontWeight: 'bold', color: item.stock <= 0 ? '#ef4444' : '#f59e0b', fontSize: '0.9rem' }}>
-                              {(item.stock / (item.baseUnit === 'g' ? 1000 : 1)).toFixed(item.unitType === 'kg' ? 2 : 0)} {item.unitType === 'kg' ? 'kg' : 'u'}
-                              {item.stock <= 0 && ' — Sin stock'}
-                            </span>
-                          </div>
-                        ))}
-                        {stats.lowStockItems.length > 5 && (
-                          <button
-                            onClick={() => setShowAllLowStock(!showAllLowStock)}
-                            style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-md)', marginTop: '0.5rem', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 'bold', fontSize: '0.9rem' }}
-                            onMouseOver={(e) => e.currentTarget.style.color = 'white'}
-                            onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                          >
-                            {showAllLowStock ? 'Ver Menos Mostrar 5 de ' + stats.lowStockItems.length : `Ver Todos (${stats.lowStockItems.length})`}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem' }}>✅ Todos los productos tienen stock suficiente</p>
-                    )}
+                          ))}
+                          {stats.lowStockItems.length > 5 && (
+                            <button
+                              onClick={() => setShowAllLowStock(!showAllLowStock)}
+                              style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '0.5rem', borderRadius: 'var(--radius-md)', marginTop: '0.5rem', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 'bold', fontSize: '0.9rem' }}
+                              onMouseOver={(e) => e.currentTarget.style.color = 'white'}
+                              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                            >
+                              {showAllLowStock ? 'Ver Menos Mostrar 5 de ' + stats.lowStockItems.length : `Ver Todos (${stats.lowStockItems.length})`}
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem' }}>✅ Todos los productos tienen stock suficiente</p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Sales History */}
@@ -757,17 +806,17 @@ export default function Home() {
         )}
       </section>
 
-      {/* PRINTABLE AREA (HIDDEN ON SCREEN) */}
-      <div className="print-only">
+      {/* PRINTABLE AREA (FORCED HALF A4 PAGE FORMAT) */}
+      <div className="print-only" style={{ height: '148.5mm', width: '210mm', overflow: 'hidden' }}>
         {lastSale && (
-          <div style={{ padding: '2rem', color: 'black', background: 'white' }}>
+          <div style={{ padding: '2rem', color: 'black', background: 'white', width: printWidth, transform: `scale(${printScale})`, transformOrigin: 'top left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid black', paddingBottom: '1rem', marginBottom: '1.5rem', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                 <img src="/logo.jpg" alt="FIT12 Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover' }} />
                 <div>
                   <h1 style={{ fontSize: '2.8rem', color: '#000', margin: 0, fontWeight: 900, lineHeight: 1 }}>FIT12</h1>
                   <p style={{ marginTop: '0.2rem', fontSize: '1.1rem', fontWeight: 'bold', color: '#444' }}>PRODUCTOS SALUDABLES</p>
-                  <p style={{ marginTop: '0.1rem', fontSize: '1rem' }}>Cordoba Argentina</p>
+                  <p style={{ marginTop: '0.1rem', fontSize: '1rem' }}>Cordoba, Argentina</p>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>

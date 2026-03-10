@@ -77,24 +77,30 @@ export async function POST(request: Request) {
                 include: { items: true }
             });
 
-            // 2. Update Stock for each item
-            for (const item of items) {
-                const product = await tx.product.findUnique({ where: { id: item.productId } });
-                if (!product) throw new Error(`Producto ${item.productId} no encontrado`);
+            // 2. Fetch SystemSettings to see if stock should be updated
+            const rootSettings = await tx.systemSettings.findUnique({ where: { id: "default" } });
+            const stockEnabled = rootSettings ? rootSettings.enableStock : true;
 
-                // Fractional logic: quantity is sold in unitType, but stock is in baseUnit
-                // If sold in Kg but controlled in G, conversionFactor is 1000.
-                // stockToRemove = soldQuantity * conversionFactor
-                const stockToRemove = parseFloat(item.quantity) * (product.conversionFactor || 1);
+            // 3. Update Stock for each item ONLY if enabled
+            if (stockEnabled) {
+                for (const item of items) {
+                    const product = await tx.product.findUnique({ where: { id: item.productId } });
+                    if (!product) throw new Error(`Producto ${item.productId} no encontrado`);
 
-                await tx.product.update({
-                    where: { id: item.productId },
-                    data: {
-                        stock: {
-                            decrement: stockToRemove
+                    // Fractional logic: quantity is sold in unitType, but stock is in baseUnit
+                    // If sold in Kg but controlled in G, conversionFactor is 1000.
+                    // stockToRemove = soldQuantity * conversionFactor
+                    const stockToRemove = parseFloat(item.quantity) * (product.conversionFactor || 1);
+
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: {
+                            stock: {
+                                decrement: stockToRemove
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
 
             return sale;

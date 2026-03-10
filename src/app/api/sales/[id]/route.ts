@@ -22,17 +22,22 @@ export async function DELETE(
 
             if (!sale) throw new Error("Venta no encontrada");
 
-            // 2. Restore stock for each item
-            for (const item of sale.items) {
-                const stockToRestore = item.quantity * (item.product.conversionFactor || 1);
-                await tx.product.update({
-                    where: { id: item.productId },
-                    data: {
-                        stock: {
-                            increment: stockToRestore
+            // 2. Restore stock for each item ONLY if enabled
+            const rootSettings = await tx.systemSettings.findUnique({ where: { id: "default" } });
+            const stockEnabled = rootSettings ? rootSettings.enableStock : true;
+
+            if (stockEnabled) {
+                for (const item of sale.items) {
+                    const stockToRestore = item.quantity * (item.product.conversionFactor || 1);
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: {
+                            stock: {
+                                increment: stockToRestore
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
 
             // 3. Delete SaleItems first (FK constraint)

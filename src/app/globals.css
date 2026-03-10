@@ -166,3 +166,50 @@ select:focus {
     display: none !important;
   }
 }
+
+/* Hide on Screen, visible for DOM measurement */
+@media screen {
+  .print-only {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    visibility: hidden;
+    width: 210mm;
+    /* A4 width */
+  }
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0.5cm;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: white;
+    min-height: auto;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+    position: relative;
+    width: 100%;
+    /* Let the receipt grow naturally so it doesn't hide products */
+    height: auto;
+    page-break-after: avoid;
+    /* Don't force a full page break if not needed */
+  }
+
+  .print-only>div {
+    /* No forced height so it only takes what it needs */
+    box-sizing: border-box;
+    margin: 0;
+  }
+}
