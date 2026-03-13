@@ -44,8 +44,8 @@ export default function Home() {
   const [enableStock, setEnableStock] = useState(true);
 
   // Deterministic scale calculation to ALWAYS fit within a 148.5mm (half A4) boundary.
-  // Base metadata height (header, customer, footer) ~400px. Each item ~35px. Target height 540px.
-  const printScale = lastSale ? Math.min(1, 540 / (400 + lastSale.items.length * 35)) : 1;
+  // Base metadata height drastically squashed via CSS to ~220px. Each row is ~20px. Target safe height 480px.
+  const printScale = lastSale ? Math.min(1, 480 / (220 + lastSale.items.length * 20)) : 1;
   const printWidth = `${(100 / printScale).toFixed(2)}%`;
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -839,59 +839,59 @@ export default function Home() {
       {/* PRINTABLE AREA (FORCED HALF A4 PAGE FORMAT) */}
       <div className="print-only" style={{ height: '148.5mm', width: '210mm', overflow: 'hidden' }}>
         {lastSale && (
-          <div style={{ padding: '2rem', color: 'black', background: 'white', width: printWidth, transform: `scale(${printScale})`, transformOrigin: 'top left' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid black', paddingBottom: '0.8rem', marginBottom: '1rem', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <img src="/logo.jpg" alt="FIT12 Logo" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
+          <div style={{ padding: '1rem', color: 'black', background: 'white', width: printWidth, transform: `scale(${printScale})`, transformOrigin: 'top left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid black', paddingBottom: '0.4rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <img src="/logo.jpg" alt="FIT12 Logo" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
                 <div>
-                  <h1 style={{ fontSize: '1.8rem', color: '#000', margin: 0, fontWeight: 900, lineHeight: 1 }}>FIT12</h1>
-                  <p style={{ marginTop: '0.1rem', fontSize: '0.9rem', fontWeight: 'bold', color: '#444' }}>PRODUCTOS SALUDABLES</p>
-                  <p style={{ marginTop: '0.05rem', fontSize: '0.8rem' }}>Cordoba, Argentina</p>
+                  <h1 style={{ fontSize: '1.4rem', color: '#000', margin: 0, fontWeight: 900, lineHeight: 1 }}>FIT12</h1>
+                  <p style={{ marginTop: '0.05rem', fontSize: '0.75rem', fontWeight: 'bold', color: '#444' }}>PRODUCTOS SALUDABLES</p>
+                  <p style={{ marginTop: '0', fontSize: '0.7rem' }}>Cordoba, Argentina</p>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <h2 style={{ fontSize: '1.4rem', margin: 0 }}>{lastSale.type.toUpperCase()}</h2>
-                <p style={{ margin: '0.2rem 0 0.1rem', fontSize: '0.9rem' }}>Fecha: {new Date(lastSale.createdAt).toLocaleDateString()}</p>
-                <p style={{ margin: 0, fontSize: '0.9rem' }}>Nro: {lastSale.id.slice(-6).toUpperCase()}</p>
+                <h2 style={{ fontSize: '1.1rem', margin: 0 }}>{lastSale.type.toUpperCase()}</h2>
+                <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem' }}>Fecha: {new Date(lastSale.createdAt).toLocaleDateString()}</p>
+                <p style={{ margin: 0, fontSize: '0.75rem' }}>Nro: {lastSale.id.slice(-6).toUpperCase()}</p>
               </div>
             </div>
 
-            <div style={{ marginBottom: '0.8rem', fontSize: '0.9rem' }}>
-              <h4 style={{ textTransform: 'uppercase', marginBottom: '0.2rem', fontSize: '0.85rem' }}>Cliente:</h4>
-              <p><strong>{lastSale.customerName || 'Consumidor Final'}</strong></p>
-              <p>Tel: {lastSale.customerPhone || '-'}{lastSale.customerAddress ? ` | Dir: ${lastSale.customerAddress}` : ''}</p>
+            <div style={{ marginBottom: '0.5rem', fontSize: '0.8rem', lineHeight: '1.2' }}>
+              <h4 style={{ textTransform: 'uppercase', margin: '0 0 0.1rem 0', fontSize: '0.75rem' }}>Cliente:</h4>
+              <p style={{ margin: 0 }}><strong>{lastSale.customerName || 'Consumidor Final'}</strong></p>
+              <p style={{ margin: 0 }}>Tel: {lastSale.customerPhone || '-'}{lastSale.customerAddress ? ` | Dir: ${lastSale.customerAddress}` : ''}</p>
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0.5rem' }}>
               <thead>
-                <tr style={{ background: '#f8fafc', textAlign: 'left', fontSize: '0.85rem' }}>
-                  <th style={{ padding: '0.4rem', borderBottom: '1px solid black' }}>Descripción</th>
-                  <th style={{ padding: '0.4rem', borderBottom: '1px solid black' }}>Cant.</th>
-                  <th style={{ padding: '0.4rem', borderBottom: '1px solid black' }}>P.Unit</th>
-                  <th style={{ padding: '0.4rem', borderBottom: '1px solid black' }}>Subtotal</th>
+                <tr style={{ background: '#f8fafc', textAlign: 'left', fontSize: '0.75rem' }}>
+                  <th style={{ padding: '0.2rem', borderBottom: '1px solid black' }}>Descripción</th>
+                  <th style={{ padding: '0.2rem', borderBottom: '1px solid black' }}>Cant.</th>
+                  <th style={{ padding: '0.2rem', borderBottom: '1px solid black' }}>P.Unit</th>
+                  <th style={{ padding: '0.2rem', borderBottom: '1px solid black' }}>Subtotal</th>
                 </tr>
               </thead>
               <tbody>
                 {lastSale.items.map((item: any, idx: number) => {
                   const product = products.find(p => p.id === item.productId);
                   return (
-                    <tr key={idx} style={{ fontSize: '0.85rem' }}>
-                      <td style={{ padding: '0.35rem', borderBottom: '1px solid #eee' }}>{product?.name || 'Producto'}</td>
-                      <td style={{ padding: '0.35rem', borderBottom: '1px solid #eee' }}>{item.quantity}</td>
-                      <td style={{ padding: '0.35rem', borderBottom: '1px solid #eee' }}>${item.price.toFixed(2)}</td>
-                      <td style={{ padding: '0.35rem', borderBottom: '1px solid #eee' }}>${item.subtotal.toFixed(2)}</td>
+                    <tr key={idx} style={{ fontSize: '0.75rem' }}>
+                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>{product?.name || 'Producto'}</td>
+                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>{item.quantity}</td>
+                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>${item.price.toFixed(2)}</td>
+                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>${item.subtotal.toFixed(2)}</td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
 
-            <div style={{ textAlign: 'right', fontSize: '1.2rem', marginTop: '0.5rem' }}>
-              <p>TOTAL: <strong>${lastSale.total.toFixed(2)}</strong></p>
+            <div style={{ textAlign: 'right', fontSize: '1rem', marginTop: '0.5rem' }}>
+              <p style={{ margin: 0 }}>TOTAL: <strong>${lastSale.total.toFixed(2)}</strong></p>
             </div>
 
-            <div style={{ marginTop: '2.5rem', textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div style={{ marginTop: '1rem', textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                 <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                 <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
