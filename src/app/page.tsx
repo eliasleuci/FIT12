@@ -12,9 +12,17 @@ export default function Home() {
   const [lastSale, setLastSale] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [salesHistory, setSalesHistory] = useState<any[]>([]);
+  const getLocalToday = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [dateRange, setDateRange] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+    startDate: getLocalToday(),
+    endDate: getLocalToday()
   });
 
   // New Product Form State
@@ -317,7 +325,19 @@ export default function Home() {
   };
 
   return (
-    <main className="container">
+    <main className="container" style={{ position: 'relative' }}>
+      {/* Decorative Background Elements */}
+      <div className="no-print" style={{ 
+        position: 'fixed', top: '-10%', left: '-10%', width: '40%', height: '40%', 
+        background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)', 
+        filter: 'blur(60px)', zIndex: -1, pointerEvents: 'none' 
+      }}></div>
+      <div className="no-print" style={{ 
+        position: 'fixed', bottom: '-10%', right: '-10%', width: '40%', height: '40%', 
+        background: 'radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, transparent 70%)', 
+        filter: 'blur(60px)', zIndex: -1, pointerEvents: 'none' 
+      }}></div>
+
       {/* BRANDING HEADER */}
       <header className="main-header glass no-print" style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.2rem', borderRadius: 'var(--radius-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -339,13 +359,25 @@ export default function Home() {
         borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem',
         overflowX: 'auto'
       }}>
-        <button onClick={() => setActiveTab("dashboard")} className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
+        <button onClick={() => setActiveTab("dashboard")} className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`} style={{ 
+          flex: 1, justifyContent: 'center', 
+          background: activeTab === 'dashboard' ? 'var(--primary-color)' : 'transparent',
+          boxShadow: activeTab === 'dashboard' ? '0 0 20px var(--primary-glow)' : 'none'
+        }}>
           <BarChart3 size={20} /> <span className="hide-mobile">Dashboard</span>
         </button>
-        <button onClick={() => setActiveTab("billing")} className={`nav-btn ${activeTab === 'billing' ? 'active' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
+        <button onClick={() => setActiveTab("billing")} className={`nav-btn ${activeTab === 'billing' ? 'active' : ''}`} style={{ 
+          flex: 1, justifyContent: 'center',
+          background: activeTab === 'billing' ? 'var(--primary-color)' : 'transparent',
+          boxShadow: activeTab === 'billing' ? '0 0 20px var(--primary-glow)' : 'none'
+        }}>
           <ShoppingCart size={20} /> <span className="hide-mobile">Vender</span>
         </button>
-        <button onClick={() => setActiveTab("stock")} className={`nav-btn ${activeTab === 'stock' ? 'active' : ''}`} style={{ flex: 1, justifyContent: 'center' }}>
+        <button onClick={() => setActiveTab("stock")} className={`nav-btn ${activeTab === 'stock' ? 'active' : ''}`} style={{ 
+          flex: 1, justifyContent: 'center',
+          background: activeTab === 'stock' ? 'var(--primary-color)' : 'transparent',
+          boxShadow: activeTab === 'stock' ? '0 0 20px var(--primary-glow)' : 'none'
+        }}>
           <Package size={20} /> <span className="hide-mobile">Stock</span>
         </button>
       </nav>
@@ -361,7 +393,7 @@ export default function Home() {
                     <input type="checkbox" checked={enableStock} onChange={toggleStock} style={{ marginRight: '0.5rem', cursor: 'pointer', accentColor: 'var(--primary-color)' }} />
                     Stock: {enableStock ? 'ON' : 'OFF'}
                   </label>
-                  <button className="primary-btn" onClick={() => setShowAddProduct(true)}>
+                  <button className="primary-btn" onClick={() => setShowAddProduct(true)} style={{ background: 'var(--primary-color)', boxShadow: '0 4px 15px var(--primary-glow)' }}>
                     <Plus size={20} /> Nuevo Producto
                   </button>
                 </div>
@@ -635,7 +667,11 @@ export default function Home() {
                 <button
                   className="secondary-btn"
                   onClick={() => {
-                    const today = new Date().toISOString().split('T')[0];
+                    const d = new Date();
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const today = `${year}-${month}-${day}`;
                     setDateRange({ startDate: today, endDate: today });
                   }}
                   style={{ padding: '0.4rem 1.2rem', height: '44px' }}
@@ -672,28 +708,46 @@ export default function Home() {
             </div>
 
             <div className="dashboard-widgets-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
-              {/* Sales Chart */}
+              {/* Sales History */}
               <div className="glass card">
-                <h3 style={{ marginBottom: '1.5rem' }}>Ventas de la Semana</h3>
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '200px', padding: '0 1rem' }}>
-                  {stats?.dailyData?.map((d: any, i: number) => {
-                    const max = Math.max(...stats.dailyData.map((day: any) => day.total), 1);
-                    const height = (d.total / max) * 100;
-                    return (
-                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                        <div style={{
-                          width: '70%',
-                          height: `${height}%`,
-                          background: 'linear-gradient(to top, var(--primary-color), var(--secondary-color))',
-                          borderRadius: '4px 4px 0 0',
-                          minHeight: d.total > 0 ? '4px' : '2px',
-                          opacity: d.total > 0 ? 1 : 0.2,
-                          transition: 'height 0.5s ease'
-                        }}></div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{d.day}</span>
-                      </div>
-                    );
-                  })}
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Trash2 size={18} style={{ color: '#ef4444' }} /> Historial de Ventas
+                  <small style={{ color: 'var(--text-secondary)', fontWeight: 'normal', marginLeft: 'auto' }}>Podés eliminar facturas erróneas — el stock se restaura automáticamente</small>
+                </h3>
+                <div className="table-container scroll-container" style={{ maxHeight: '450px' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                        <th>Eliminar</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {salesHistory.length === 0 && (
+                        <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No hay ventas en este período</td></tr>
+                      )}
+                      {salesHistory.map((sale: any) => (
+                        <tr key={sale.id}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{new Date(sale.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                          <td><span style={{ background: sale.type === 'Factura' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.1)', color: sale.type === 'Factura' ? '#60a5fa' : '#10b981', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>{sale.type}</span></td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{sale.customerName || 'Consumidor Final'}</td>
+                          <td style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${sale.total.toFixed(2)}</td>
+                          <td>
+                            <button
+                              onClick={() => deleteSale(sale.id)}
+                              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.35rem 0.7rem', borderRadius: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem' }}
+                              title="Eliminar esta venta y restaurar stock"
+                            >
+                              <Trash2 size={13} /> Anular
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -758,48 +812,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Sales History */}
-              <div className="glass card">
-                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Trash2 size={18} style={{ color: '#ef4444' }} /> Historial de Ventas
-                  <small style={{ color: 'var(--text-secondary)', fontWeight: 'normal', marginLeft: 'auto' }}>Podés eliminar facturas erróneas — el stock se restaura automáticamente</small>
-                </h3>
-                <div className="table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Fecha</th>
-                        <th>Tipo</th>
-                        <th>Cliente</th>
-                        <th>Total</th>
-                        <th>Eliminar</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesHistory.length === 0 && (
-                        <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No hay ventas en este período</td></tr>
-                      )}
-                      {salesHistory.map((sale: any) => (
-                        <tr key={sale.id}>
-                          <td style={{ whiteSpace: 'nowrap' }}>{new Date(sale.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
-                          <td><span style={{ background: sale.type === 'Factura' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.1)', color: sale.type === 'Factura' ? '#60a5fa' : '#10b981', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>{sale.type}</span></td>
-                          <td style={{ color: 'var(--text-secondary)' }}>{sale.customerName || 'Consumidor Final'}</td>
-                          <td style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${sale.total.toFixed(2)}</td>
-                          <td>
-                            <button
-                              onClick={() => deleteSale(sale.id)}
-                              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.35rem 0.7rem', borderRadius: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem' }}
-                              title="Eliminar esta venta y restaurar stock"
-                            >
-                              <Trash2 size={13} /> Anular
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
 
             </div>
           </div>
