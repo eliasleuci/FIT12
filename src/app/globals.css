@@ -54,7 +54,6 @@ button {
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-lg);
   position: relative;
-  overflow: hidden;
 }
 
 .glass::before {
