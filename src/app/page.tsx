@@ -852,7 +852,7 @@ export default function Home() {
               <div style={{ textAlign: 'right' }}>
                 <h2 style={{ fontSize: '1.1rem', margin: 0 }}>{lastSale.type.toUpperCase()}</h2>
                 <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem' }}>Fecha: {new Date(lastSale.createdAt).toLocaleDateString()}</p>
-                <p style={{ margin: 0, fontSize: '0.75rem' }}>Nro: {lastSale.id.slice(-6).toUpperCase()}</p>
+                <p style={{ margin: 0, fontSize: '0.75rem' }}>TEL: 3516696017</p>
               </div>
             </div>
 
