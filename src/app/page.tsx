@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, Package, ShoppingCart, BarChart3, Search, Save, X, Trash2, Pencil, User as UserIcon, Phone, MapPin, Download, Share2 } from "lucide-react";
 
+const formatCurrency = (value: number | null | undefined) =>
+  (value ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState("billing");
   const [products, setProducts] = useState<any[]>([]);
@@ -310,10 +313,10 @@ export default function Home() {
 
     const itemsList = lastSale.items.map((item: any) => {
       const product = products.find(p => p.id === item.productId);
-      return `- ${product?.name || 'Producto'}: ${item.quantity} x $${item.price.toFixed(2)} = $${item.subtotal.toFixed(2)}`;
+      return `- ${product?.name || 'Producto'}: ${item.quantity} x $${formatCurrency(item.price)} = $${formatCurrency(item.subtotal)}`;
     }).join('\n');
 
-    const message = `*FIT12 - ${lastSale.type}*\n\nHola ${lastSale.customerName || 'Cliente'},\n\nDetalle de tu compra:\n${itemsList}\n\n*TOTAL: $${lastSale.total.toFixed(2)}*\n\n_Para recibir el comprobante formal, por favor solicita que te adjunten el PDF descargado._`;
+    const message = `*FIT12 - ${lastSale.type}*\n\nHola ${lastSale.customerName || 'Cliente'},\n\nDetalle de tu compra:\n${itemsList}\n\n*TOTAL: $${formatCurrency(lastSale.total)}*\n\n_Para recibir el comprobante formal, por favor solicita que te adjunten el PDF descargado._`;
 
     const url = `https://wa.me/${lastSale.customerPhone?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
@@ -596,7 +599,7 @@ export default function Home() {
                               <small style={{ fontSize: '0.75rem', opacity: 0.7 }}>{item.unitType}</small>
                             </div>
                           </td>
-                          <td style={{ fontWeight: 'bold' }}>${item.subtotal.toFixed(2)}</td>
+                          <td style={{ fontWeight: 'bold' }}>${formatCurrency(item.subtotal)}</td>
                           <td style={{ textAlign: 'right' }}>
                             <button onClick={() => removeFromCart(item.productId)} style={{ color: '#ef4444', background: 'transparent', border: 'none', padding: '0.4rem', cursor: 'pointer' }}>
                               <Trash2 size={16} />
@@ -616,7 +619,7 @@ export default function Home() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <span>Subtotal</span>
-                    <strong>${subtotal.toFixed(2)}</strong>
+                    <strong>${formatCurrency(subtotal)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                     <span>Impuestos (0%)</span>
@@ -625,7 +628,7 @@ export default function Home() {
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '1rem 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.5rem', fontWeight: 'bold' }}>
                     <span>TOTAL</span>
-                    <span style={{ color: 'var(--secondary-color)' }}>${subtotal.toFixed(2)}</span>
+                    <span style={{ color: 'var(--secondary-color)' }}>${formatCurrency(subtotal)}</span>
                   </div>
                 </div>
 
@@ -712,14 +715,14 @@ export default function Home() {
                 <div className="stats-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--secondary-color)' }}><BarChart3 size={24} /></div>
                 <div>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Ingresos Brutos</p>
-                  <h3 style={{ color: 'var(--secondary-color)' }}>${stats?.revenue?.toFixed(2) || '0.00'}</h3>
+                  <h3 style={{ color: 'var(--secondary-color)' }}>${formatCurrency(stats?.revenue)}</h3>
                 </div>
               </div>
               <div className="glass card stats-card">
                 <div className="stats-icon" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}><Save size={24} /></div>
                 <div>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Ganancia Est.</p>
-                  <h3 style={{ color: '#8b5cf6' }}>${stats?.profit?.toFixed(2) || '0.00'}</h3>
+                  <h3 style={{ color: '#8b5cf6' }}>${formatCurrency(stats?.profit)}</h3>
                 </div>
               </div>
 
@@ -752,7 +755,7 @@ export default function Home() {
                           <td style={{ whiteSpace: 'nowrap' }}>{new Date(sale.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
                           <td><span style={{ background: sale.type === 'Factura' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.1)', color: sale.type === 'Factura' ? '#60a5fa' : '#10b981', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>{sale.type}</span></td>
                           <td style={{ color: 'var(--text-secondary)' }}>{sale.customerName || 'Consumidor Final'}</td>
-                          <td style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${sale.total.toFixed(2)}</td>
+                          <td style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${formatCurrency(sale.total)}</td>
                           <td>
                             <button
                               onClick={() => deleteSale(sale.id)}
@@ -781,7 +784,7 @@ export default function Home() {
                           <strong style={{ display: 'block' }}>{p.name}</strong>
                           <small style={{ color: 'var(--text-secondary)' }}>{p.quantity} vendidos</small>
                         </div>
-                        <span style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${p.revenue.toFixed(2)}</span>
+                        <span style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${formatCurrency(p.revenue)}</span>
                       </div>
                     ))}
                     {(!stats?.topProducts || stats.topProducts.length === 0) && (
@@ -878,8 +881,8 @@ export default function Home() {
                     <tr key={idx} style={{ fontSize: '0.75rem' }}>
                       <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>{product?.name || 'Producto'}</td>
                       <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>{item.quantity}</td>
-                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>${item.price.toFixed(2)}</td>
-                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>${item.subtotal.toFixed(2)}</td>
+                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>${formatCurrency(item.price)}</td>
+                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>${formatCurrency(item.subtotal)}</td>
                     </tr>
                   )
                 })}
@@ -887,7 +890,7 @@ export default function Home() {
             </table>
 
             <div style={{ textAlign: 'right', fontSize: '1rem', marginTop: '0.5rem' }}>
-              <p style={{ margin: 0 }}>TOTAL: <strong>${lastSale.total.toFixed(2)}</strong></p>
+              <p style={{ margin: 0 }}>TOTAL: <strong>${formatCurrency(lastSale.total)}</strong></p>
             </div>
 
             <div style={{ marginTop: '1rem', textAlign: 'center', borderTop: '1px dashed #ccc', paddingTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
