@@ -46,10 +46,15 @@ export default function Home() {
   const [showAllLowStock, setShowAllLowStock] = useState(false);
   const [enableStock, setEnableStock] = useState(true);
 
-  // Deterministic scale calculation to ALWAYS fit within a 148.5mm (half A4) boundary.
-  // Base metadata height drastically squashed via CSS to ~220px. Each row is ~20px. Target safe height 480px.
-  const printScale = lastSale ? Math.min(1, 480 / (220 + lastSale.items.length * 20)) : 1;
+  // Deterministic scale calculation to ALWAYS fit within the printable boundary.
+  // Base metadata height drastically squashed via CSS to ~220px. Each row is ~20px.
+  // From 15 products onward the receipt no longer fits comfortably in half a page,
+  // so it switches to a full A4 page (target safe height ~1000px) instead.
+  const useFullPage = !!lastSale && lastSale.items.length >= 15;
+  const printTargetHeight = useFullPage ? 1000 : 480;
+  const printScale = lastSale ? Math.min(1, printTargetHeight / (220 + lastSale.items.length * 20)) : 1;
   const printWidth = `${(100 / printScale).toFixed(2)}%`;
+  const printPageHeight = useFullPage ? '297mm' : '148.5mm';
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -839,8 +844,8 @@ export default function Home() {
         )}
       </section>
 
-      {/* PRINTABLE AREA (FORCED HALF A4 PAGE FORMAT) */}
-      <div className="print-only" style={{ height: '148.5mm', width: '210mm', overflow: 'hidden' }}>
+      {/* PRINTABLE AREA (HALF A4 for short receipts, FULL A4 from 15 products onward) */}
+      <div className="print-only" style={{ minHeight: printPageHeight, width: '210mm', overflow: 'visible' }}>
         {lastSale && (
           <div style={{ padding: '1rem', color: 'black', background: 'white', width: printWidth, transform: `scale(${printScale})`, transformOrigin: 'top left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid black', paddingBottom: '0.4rem', marginBottom: '0.5rem', alignItems: 'center' }}>
