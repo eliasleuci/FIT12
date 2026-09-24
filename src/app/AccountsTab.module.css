@@ -1,0 +1,395 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+/* KPIs: 2x2 on phones, 4 across on desktop */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.9rem !important;
+  min-width: 0;
+}
+
+.kpiTop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.kpiIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpiValue {
+  margin: 0;
+  font-size: clamp(1rem, 4.6vw, 1.6rem);
+  font-weight: 800;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.search {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.search input {
+  padding-left: 2.5rem;
+}
+
+.chips {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem 0.1rem;
+  scroll-snap-type: x proximity;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 38px;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chipActive {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+.chipCount {
+  font-size: 0.72rem;
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+
+/* List: compact cards on phones, table-like grid on desktop.
+   It scrolls on its own so the search box above stays in view. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 70vh;
+  max-height: 70dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  margin-right: -0.4rem;
+  padding-right: 0.4rem;
+}
+
+.resultInfo {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: -0.25rem 0 0.6rem;
+}
+
+.headRow {
+  display: none;
+}
+
+.row {
+  --status-color: var(--text-secondary);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "customer total"
+    "date balance"
+    "cash transfer"
+    "note status";
+  gap: 0.5rem 0.6rem;
+  align-items: center;
+  padding: 0.7rem 0.8rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.customer {
+  grid-area: customer;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.total {
+  grid-area: total;
+  justify-self: end;
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.date {
+  grid-area: date;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.statusCell {
+  grid-area: status;
+  justify-self: stretch;
+  align-self: end;
+}
+
+.statusCell .statusSelectWrap,
+.statusCell .statusSelect {
+  width: 100%;
+  min-width: 0;
+}
+
+.statusSelect {
+  text-overflow: ellipsis;
+}
+
+.statusSelectWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.statusSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  width: auto;
+  min-height: 34px;
+  padding: 0 1.7rem 0 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--status-color);
+  background: color-mix(in srgb, var(--status-color) 14%, transparent);
+}
+
+.statusSelect:hover {
+  border-color: color-mix(in srgb, var(--status-color) 40%, transparent);
+}
+
+.statusSelect:focus {
+  border-color: var(--status-color);
+  background: color-mix(in srgb, var(--status-color) 14%, transparent);
+  box-shadow: none;
+}
+
+.statusSelect option {
+  background: #0f172a;
+  color: var(--text-primary);
+}
+
+.statusChevron {
+  position: absolute;
+  right: 0.6rem;
+  pointer-events: none;
+  color: var(--status-color);
+}
+
+.cash { grid-area: cash; }
+.transfer { grid-area: transfer; }
+.note { grid-area: note; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.note .fieldLabel {
+  display: none;
+}
+
+.fieldLabel {
+  font-size: 0.65rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* 16px keeps iOS Safari from zooming in on focus */
+.field input {
+  font-size: 16px;
+  min-height: 40px;
+  padding: 0.4rem 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance {
+  grid-area: balance;
+  justify-self: end;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.balanceLabel {
+  color: var(--text-secondary);
+  margin-right: 0.35rem;
+}
+
+.balanceDue { color: #ef4444; font-weight: 800; }
+.balanceOk { color: #10b981; font-weight: 800; }
+
+/* On phones it shares the date cell, right-aligned */
+.saved {
+  grid-area: date;
+  justify-self: end;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-height: 1.2em;
+}
+
+.savedOk { color: #10b981; }
+.savedError { color: #ef4444; }
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 2rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .kpis { gap: 1rem; }
+  .kpi { padding: 1.1rem !important; }
+  .toolbar { flex-direction: row; align-items: center; }
+  .search { flex: 1 1 260px; }
+  .chips { margin: 0; padding: 0; }
+}
+
+@media (min-width: 1000px) {
+  .wrapper { gap: 1.5rem; }
+  .title { font-size: 1.5rem; }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.2rem; }
+
+  .list {
+    gap: 0;
+    max-height: 640px;
+    margin-right: 0;
+    padding-right: 0;
+  }
+
+  .headRow,
+  .row {
+    grid-template-columns:
+      88px minmax(140px, 1.3fr) minmax(110px, 0.9fr)
+      minmax(120px, 1fr) minmax(120px, 1fr)
+      minmax(100px, 0.8fr) 136px minmax(150px, 1.3fr) 76px;
+    grid-template-areas: none;
+    gap: 0.75rem;
+  }
+
+  .headRow {
+    display: grid;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 0.8rem 0.75rem;
+    background: #0b1424;
+    border-bottom: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .row {
+    padding: 0.55rem 0.75rem;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .row:hover { background: rgba(255, 255, 255, 0.025); }
+
+  .customer, .total, .date, .statusCell, .cash, .transfer, .note, .balance, .saved {
+    grid-area: auto;
+  }
+
+  .date { order: 1; }
+  .customer { order: 2; }
+  .total { order: 3; justify-self: start; }
+  .cash { order: 4; }
+  .transfer { order: 5; }
+  .balance { order: 6; }
+  .statusCell { order: 7; justify-self: stretch; }
+  .note { order: 8; }
+  .saved { order: 9; }
+
+  .fieldLabel, .balanceLabel { display: none; }
+  .balance { justify-self: start; }
+  .statusCell { align-self: center; min-width: 0; }
+  .field input { min-height: 40px; }
+}

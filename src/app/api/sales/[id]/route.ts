@@ -54,28 +54,44 @@ export async function DELETE(
     }
 }
 
+const MANUAL_STATUSES = ["pagado", "parcial", "debe", "sin_registrar"];
+
 export async function PATCH(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { id } = await params;
-        const { paidCash, paidTransfer, paymentNote } = await request.json();
+        const body = await request.json();
+        const data: Record<string, unknown> = {};
 
-        const cash = Number(paidCash ?? 0);
-        const transfer = Number(paidTransfer ?? 0);
-        if (!Number.isFinite(cash) || !Number.isFinite(transfer) || cash < 0 || transfer < 0) {
-            return NextResponse.json({ error: "Montos inválidos" }, { status: 400 });
+        if ("paidCash" in body || "paidTransfer" in body || "paymentNote" in body) {
+            const cash = Number(body.paidCash ?? 0);
+            const transfer = Number(body.paidTransfer ?? 0);
+            if (!Number.isFinite(cash) || !Number.isFinite(transfer) || cash < 0 || transfer < 0) {
+                return NextResponse.json({ error: "Montos inválidos" }, { status: 400 });
+            }
+            data.paidCash = cash;
+            data.paidTransfer = transfer;
+            data.paymentNote = typeof body.paymentNote === "string" && body.paymentNote.trim() ? body.paymentNote.trim() : null;
+            data.paymentUpdatedAt = new Date();
+        }
+
+        // null = let the status be derived automatically from the amounts paid
+        if ("paymentStatus" in body) {
+            if (body.paymentStatus !== null && !MANUAL_STATUSES.includes(body.paymentStatus)) {
+                return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
+            }
+            data.paymentStatus = body.paymentStatus;
+        }
+
+        if (Object.keys(data).length === 0) {
+            return NextResponse.json({ error: "Nada para actualizar" }, { status: 400 });
         }
 
         const sale = await prisma.sale.update({
             where: { id },
-            data: {
-                paidCash: cash,
-                paidTransfer: transfer,
-                paymentNote: typeof paymentNote === "string" && paymentNote.trim() ? paymentNote.trim() : null,
-                paymentUpdatedAt: new Date(),
-            },
+            data,
             include: { items: { include: { product: { select: { name: true } } } } }
         });
 
