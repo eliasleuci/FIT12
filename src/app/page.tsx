@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Package, ShoppingCart, BarChart3, Search, Save, X, Trash2, Pencil, User as UserIcon, Phone, MapPin, Download, Share2, Eye } from "lucide-react";
+import { Plus, Package, ShoppingCart, BarChart3, Search, Save, X, Trash2, Pencil, User as UserIcon, Phone, MapPin, Download, Share2, Eye, Wallet } from "lucide-react";
+import AccountsTab from "./AccountsTab";
 
 const formatCurrency = (value: number | null | undefined) =>
   (value ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -348,6 +349,43 @@ export default function Home() {
     setPendingReprint(true);
   };
 
+  const dateFilterControls = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', width: '100%', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 auto', minWidth: '150px' }}>
+        <label style={{ whiteSpace: 'nowrap', fontSize: '0.9rem' }}>Desde:</label>
+        <input
+          type="date"
+          value={dateRange.startDate}
+          onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+          style={{ padding: '0.4rem 0.8rem', width: '100%' }}
+        />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 auto', minWidth: '150px' }}>
+        <label style={{ whiteSpace: 'nowrap', fontSize: '0.9rem' }}>Hasta:</label>
+        <input
+          type="date"
+          value={dateRange.endDate}
+          onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+          style={{ padding: '0.4rem 0.8rem', width: '100%' }}
+        />
+      </div>
+      <button
+        className="secondary-btn"
+        onClick={() => {
+          const d = new Date();
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const today = `${year}-${month}-${day}`;
+          setDateRange({ startDate: today, endDate: today });
+        }}
+        style={{ padding: '0.4rem 1.2rem', height: '44px' }}
+      >
+        Hoy
+      </button>
+    </div>
+  );
+
   return (
     <main className="container" style={{ position: 'relative' }}>
       {/* Decorative Background Elements */}
@@ -403,6 +441,13 @@ export default function Home() {
           boxShadow: activeTab === 'stock' ? '0 0 20px var(--primary-glow)' : 'none'
         }}>
           <Package size={20} /> <span className="hide-mobile">Stock</span>
+        </button>
+        <button onClick={() => setActiveTab("accounts")} className={`nav-btn ${activeTab === 'accounts' ? 'active' : ''}`} style={{
+          flex: 1, justifyContent: 'center',
+          background: activeTab === 'accounts' ? 'var(--primary-color)' : 'transparent',
+          boxShadow: activeTab === 'accounts' ? '0 0 20px var(--primary-glow)' : 'none'
+        }}>
+          <Wallet size={20} /> <span className="hide-mobile">Estado de Cuentas</span>
         </button>
       </nav>
 
@@ -679,6 +724,15 @@ export default function Home() {
           </div>
         )}
 
+        {activeTab === "accounts" && (
+          <AccountsTab
+            sales={salesHistory}
+            formatCurrency={formatCurrency}
+            dateFilter={dateFilterControls}
+            onSaleUpdated={(updated) => setSalesHistory(prev => prev.map(s => s.id === updated.id ? updated : s))}
+          />
+        )}
+
         {activeTab === "dashboard" && (
           <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {/* Header with Date Filter */}
@@ -687,40 +741,7 @@ export default function Home() {
                 <BarChart3 size={24} style={{ color: 'var(--primary-color)' }} />
                 <h2 style={{ margin: 0 }}>Panel de Control</h2>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', width: '100%', justifyContent: 'flex-end' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 auto', minWidth: '150px' }}>
-                  <label style={{ whiteSpace: 'nowrap', fontSize: '0.9rem' }}>Desde:</label>
-                  <input
-                    type="date"
-                    value={dateRange.startDate}
-                    onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                    style={{ padding: '0.4rem 0.8rem', width: '100%' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 auto', minWidth: '150px' }}>
-                  <label style={{ whiteSpace: 'nowrap', fontSize: '0.9rem' }}>Hasta:</label>
-                  <input
-                    type="date"
-                    value={dateRange.endDate}
-                    onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                    style={{ padding: '0.4rem 0.8rem', width: '100%' }}
-                  />
-                </div>
-                <button
-                  className="secondary-btn"
-                  onClick={() => {
-                    const d = new Date();
-                    const year = d.getFullYear();
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const today = `${year}-${month}-${day}`;
-                    setDateRange({ startDate: today, endDate: today });
-                  }}
-                  style={{ padding: '0.4rem 1.2rem', height: '44px' }}
-                >
-                  Hoy
-                </button>
-              </div>
+              {dateFilterControls}
             </div>
 
             {/* KPI Cards */}

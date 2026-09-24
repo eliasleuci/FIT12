@@ -51,8 +51,12 @@ model Sale {
   customerName    String?
   customerPhone   String?
   customerAddress String?
-  sellerId        String
-  createdAt       DateTime   @default(now())
+  sellerId         String
+  paidCash         Float      @default(0)
+  paidTransfer     Float      @default(0)
+  paymentNote      String?
+  paymentUpdatedAt DateTime?
+  createdAt        DateTime   @default(now())
   seller          User       @relation(fields: [sellerId], references: [id])
   items           SaleItem[]
 }

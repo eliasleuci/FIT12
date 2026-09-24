@@ -54,6 +54,38 @@ export async function DELETE(
     }
 }
 
+export async function PATCH(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+        const { paidCash, paidTransfer, paymentNote } = await request.json();
+
+        const cash = Number(paidCash ?? 0);
+        const transfer = Number(paidTransfer ?? 0);
+        if (!Number.isFinite(cash) || !Number.isFinite(transfer) || cash < 0 || transfer < 0) {
+            return NextResponse.json({ error: "Montos inválidos" }, { status: 400 });
+        }
+
+        const sale = await prisma.sale.update({
+            where: { id },
+            data: {
+                paidCash: cash,
+                paidTransfer: transfer,
+                paymentNote: typeof paymentNote === "string" && paymentNote.trim() ? paymentNote.trim() : null,
+                paymentUpdatedAt: new Date(),
+            },
+            include: { items: { include: { product: { select: { name: true } } } } }
+        });
+
+        return NextResponse.json(sale);
+    } catch (error: any) {
+        console.error("Update Payment Error:", error);
+        return NextResponse.json({ error: error.message || "Error al actualizar el pago" }, { status: 500 });
+    }
+}
+
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }

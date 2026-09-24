@@ -28,7 +28,7 @@ export async function GET(request: Request) {
                 }
             },
             orderBy: { createdAt: 'desc' },
-            take: 50
+            take: 500
         });
 
         return NextResponse.json(sales);
