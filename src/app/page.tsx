@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Package, ShoppingCart, BarChart3, Search, Save, X, Trash2, Pencil, User as UserIcon, Phone, MapPin, Download, Share2 } from "lucide-react";
+import { Plus, Package, ShoppingCart, BarChart3, Search, Save, X, Trash2, Pencil, User as UserIcon, Phone, MapPin, Download, Share2, Eye } from "lucide-react";
 
 const formatCurrency = (value: number | null | undefined) =>
   (value ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -330,6 +330,22 @@ export default function Home() {
 
   const printDocument = () => {
     window.print();
+  };
+
+  // Re-open a past sale from the history table and trigger printing/PDF once
+  // React has actually re-rendered the printable area with its data.
+  const [pendingReprint, setPendingReprint] = useState(false);
+
+  useEffect(() => {
+    if (pendingReprint && lastSale) {
+      setPendingReprint(false);
+      window.print();
+    }
+  }, [pendingReprint, lastSale]);
+
+  const viewSaleInvoice = (sale: any) => {
+    setLastSale(sale);
+    setPendingReprint(true);
   };
 
   return (
@@ -748,12 +764,13 @@ export default function Home() {
                         <th>Tipo</th>
                         <th>Cliente</th>
                         <th>Total</th>
+                        <th>Factura</th>
                         <th>Eliminar</th>
                       </tr>
                     </thead>
                     <tbody>
                       {salesHistory.length === 0 && (
-                        <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No hay ventas en este período</td></tr>
+                        <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No hay ventas en este período</td></tr>
                       )}
                       {salesHistory.map((sale: any) => (
                         <tr key={sale.id}>
@@ -761,6 +778,15 @@ export default function Home() {
                           <td><span style={{ background: sale.type === 'Factura' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.1)', color: sale.type === 'Factura' ? '#60a5fa' : '#10b981', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>{sale.type}</span></td>
                           <td style={{ color: 'var(--text-secondary)' }}>{sale.customerName || 'Consumidor Final'}</td>
                           <td style={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}>${formatCurrency(sale.total)}</td>
+                          <td>
+                            <button
+                              onClick={() => viewSaleInvoice(sale)}
+                              style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', padding: '0.35rem 0.7rem', borderRadius: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem' }}
+                              title="Volver a ver e imprimir/descargar esta factura"
+                            >
+                              <Eye size={13} /> Ver
+                            </button>
+                          </td>
                           <td>
                             <button
                               onClick={() => deleteSale(sale.id)}
@@ -882,9 +908,10 @@ export default function Home() {
               <tbody>
                 {lastSale.items.map((item: any, idx: number) => {
                   const product = products.find(p => p.id === item.productId);
+                  const productName = product?.name || item.product?.name || 'Producto';
                   return (
                     <tr key={idx} style={{ fontSize: '0.75rem' }}>
-                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>{product?.name || 'Producto'}</td>
+                      <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>{productName}</td>
                       <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>{item.quantity}</td>
                       <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>${formatCurrency(item.price)}</td>
                       <td style={{ padding: '0.2rem', borderBottom: '1px solid #eee' }}>${formatCurrency(item.subtotal)}</td>
